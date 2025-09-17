@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>💌 Message Kirby</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Comic Sans MS', 'Arial', sans-serif;
+            background: linear-gradient(135deg, #FFB6C1 0%, #87CEEB 50%, #98FB98 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #333;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(10px);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .title {
+            font-size: 2.5em;
+            color: #FF69B4;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            font-size: 1.2em;
+            color: #666;
+            margin-bottom: 20px;
+        }
+
+        .weather-info {
+            background: linear-gradient(45deg, #87CEEB, #98FB98);
+            padding: 15px;
+            border-radius: 15px;
+            text-align: center;
+            margin-bottom: 30px;
+            color: white;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+        }
+
+        .weather-temp {
+            font-size: 1.5em;
+            font-weight: bold;
+        }
+
+        .message-form {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            border: 3px solid #FFB6C1;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #555;
+        }
+
+        input[type="text"], textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            font-size: 16px;
+            font-family: inherit;
+            transition: border-color 0.3s ease;
+        }
+
+        input[type="text"]:focus, textarea:focus {
+            outline: none;
+            border-color: #FF69B4;
+            box-shadow: 0 0 0 3px rgba(255, 105, 180, 0.2);
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .send-btn {
+            background: linear-gradient(45deg, #FF69B4, #FFB6C1);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 1.2em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(255, 105, 180, 0.3);
+            width: 100%;
+        }
+
+        .send-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(255, 105, 180, 0.4);
+        }
+
+        .send-btn:active {
+            transform: translateY(0);
+        }
+
+        .messages-section {
+            margin-top: 30px;
+        }
+
+        .messages-title {
+            font-size: 1.5em;
+            color: #FF69B4;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .message-item {
+            background: rgba(255, 182, 193, 0.3);
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            border-left: 4px solid #FF69B4;
+        }
+
+        .message-header {
+            font-weight: bold;
+            color: #FF1493;
+            margin-bottom: 5px;
+        }
+
+        .message-text {
+            color: #333;
+            line-height: 1.5;
+        }
+
+        .message-time {
+            font-size: 0.8em;
+            color: #888;
+            margin-top: 5px;
+        }
+
+        .no-messages {
+            text-align: center;
+            color: #888;
+            font-style: italic;
+            padding: 20px;
+        }
+
+        .alert {
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 2px solid #c3e6cb;
+        }
+
+        .alert-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 2px solid #f5c6cb;
+        }
+
+        .kirby-emoji {
+            font-size: 2em;
+            display: inline-block;
+            margin: 0 10px;
+            animation: float 3s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .refresh-info {
+            text-align: center;
+            color: #666;
+            font-size: 0.9em;
+            margin-top: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                margin: 10px;
+                padding: 20px;
+            }
+            
+            .title {
+                font-size: 2em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1 class="title">💌 Message Kirby</h1>
+            <p class="subtitle">Send a message to Kirby on the weather display!</p>
+            <span class="kirby-emoji">🌟</span>
+            <span class="kirby-emoji">💖</span>
+            <span class="kirby-emoji">🌟</span>
+        </div>
+
+        {% if weather %}
+        <div class="weather-info">
+            <div class="weather-temp">{{ weather.temperature }}°C • {{ weather.condition }}</div>
+            <div>{{ weather.city }}, {{ weather.region }}</div>
+        </div>
+        {% endif %}
+
+        <!-- Success/Error Messages -->
+        {% if request.args.get('sent') == 'true' %}
+        <div class="alert alert-success">
+            ✅ Your message was sent to Kirby! Check the weather display! 🌟
+        </div>
+        {% endif %}
+
+        {% if request.args.get('error') == 'true' %}
+        <div class="alert alert-error">
+            ❌ Oops! Please make sure to write a message for Kirby! 💭
+        </div>
+        {% endif %}
+
+        <!-- Message Form -->
+        <form class="message-form" method="POST" action="/send">
+            <div class="form-group">
+                <label for="username">Your Name (optional):</label>
+                <input type="text" id="username" name="username" placeholder="Anonymous" maxlength="20">
+            </div>
+            
+            <div class="form-group">
+                <label for="message">Message for Kirby:</label>
+                <textarea id="message" name="message" placeholder="Hi Kirby! How are you today? 🌟" required maxlength="200"></textarea>
+            </div>
+            
+            <button type="submit" class="send-btn">💌 Send to Kirby 💌</button>
+        </form>
+
+        <!-- Recent Messages -->
+        <div class="messages-section">
+            <h2 class="messages-title">📬 Recent Messages to Kirby</h2>
+            
+            {% if messages %}
+                {% for msg in messages[-5:] | reverse %}
+                <div class="message-item">
+                    <div class="message-header">{{ msg.username or 'Anonymous' }}</div>
+                    <div class="message-text">{{ msg.message }}</div>
+                    <div class="message-time">{{ msg.timestamp.split('T')[0] }} at {{ msg.timestamp.split('T')[1].split('.')[0] }}</div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="no-messages">
+                    🌟 No messages yet! Be the first to say hi to Kirby! 🌟
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="refresh-info">
+            💡 Tip: Messages appear on Kirby's weather display and rotate every 30 seconds!<br>
+            🔄 This page refreshes automatically to show new messages.
+        </div>
+    </div>
+
+    <script>
+        // Auto-refresh page every 30 seconds to show new messages
+        setTimeout(function() {
+            // Only refresh if no form data is being entered
+            if (!document.querySelector('input:focus') && !document.querySelector('textarea:focus')) {
+                window.location.reload();
+            }
+        }, 30000);
+
+        // Focus on message textarea for better UX
+        document.addEventListener('DOMContentLoaded', function() {
+            const messageBox = document.getElementById('message');
+            if (messageBox && !window.location.search.includes('sent=true')) {
+                messageBox.focus();
+            }
+        });
+    </script>
+</body>
+</html>

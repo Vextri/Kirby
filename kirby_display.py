@@ -10,6 +10,7 @@ import os
 import time
 from dotenv import load_dotenv
 import requests
+import json
 
 # Load environment variables
 load_dotenv()
@@ -18,8 +19,10 @@ load_dotenv()
 pygame.init()
 
 # Constants
-WINDOW_WIDTH = 800
-WINDOW_HEIGHT = 600
+INITIAL_WINDOW_WIDTH = 800
+INITIAL_WINDOW_HEIGHT = 600
+MIN_WINDOW_WIDTH = 400
+MIN_WINDOW_HEIGHT = 300
 BACKGROUND_COLOR = (135, 206, 235)  # Sky blue
 KIRBY_COLOR = (255, 182, 193)       # Pink
 TEXT_COLOR = (255, 255, 255)        # White
@@ -192,6 +195,37 @@ def get_weather_data(city="Lethbridge, Alberta"):
         print(f"❌ Error fetching weather: {e}")
         return None
 
+def get_latest_message():
+    """Fetch the latest message from the web server"""
+    try:
+        response = requests.get("http://localhost:5000/api/latest", timeout=5)
+        if response.status_code == 200:
+            data = response.json()
+            if data.get('message'):
+                return data
+        return None
+    except Exception as e:
+        if DEBUG_FONT_LOG:  # Only show debug if enabled
+            print(f"🔗 Message fetch failed: {e}")
+        return None
+
+def get_all_messages():
+    """Fetch all messages from the web server"""
+    try:
+        response = requests.get("http://localhost:5000/api/messages", timeout=5)
+        if response.status_code == 200:
+            data = response.json()
+            # The API returns {"messages": [...]} so extract the messages array
+            if isinstance(data, dict) and 'messages' in data:
+                messages = data['messages']
+                if isinstance(messages, list) and len(messages) > 0:
+                    return messages
+        return []
+    except Exception as e:
+        if DEBUG_FONT_LOG:  # Only show debug if enabled
+            print(f"🔗 All messages fetch failed: {e}")
+        return []
+
 def get_season_from_temperature(temperature):
     """
     Determine season based on Lethbridge, Alberta temperature ranges
@@ -206,11 +240,17 @@ def get_season_from_temperature(temperature):
     else:
         return 'winter'      # Below 0°C (32°F) - Cold winter weather
 
-def load_kirby_image_by_temperature(temperature, weather_condition="default"):
+def load_kirby_image_by_temperature(temperature, weather_condition="default", max_width=None, max_height=None):
     """Load Kirby image based on temperature (season) with cycling/random selection"""
     import glob
     import random
     import time
+    
+    # Use default sizes if not provided
+    if max_width is None:
+        max_width = INITIAL_WINDOW_WIDTH - 100
+    if max_height is None:
+        max_height = INITIAL_WINDOW_HEIGHT - 250
     
     # Get the season based on temperature
     season = get_season_from_temperature(temperature)
@@ -245,10 +285,7 @@ def load_kirby_image_by_temperature(temperature, weather_condition="default"):
             # Scale to fit nicely in the window while maintaining aspect ratio
             img_rect = kirby_image.get_rect()
             
-            # Calculate max size based on window dimensions (leave room for text)
-            max_width = WINDOW_WIDTH - 100  # 50px padding on each side
-            max_height = WINDOW_HEIGHT - 250  # Leave room for title and text below
-            
+            # Use the provided max dimensions
             if img_rect.width > max_width or img_rect.height > max_height:
                 scale_factor = min(max_width/img_rect.width, max_height/img_rect.height)
                 new_width = int(img_rect.width * scale_factor)
@@ -281,10 +318,8 @@ def load_kirby_image_by_temperature(temperature, weather_condition="default"):
         try:
             kirby_image = pygame.image.load(fallback_image)
             
-            # Scale appropriately
+            # Scale appropriately using provided max dimensions
             img_rect = kirby_image.get_rect()
-            max_width = WINDOW_WIDTH - 100
-            max_height = WINDOW_HEIGHT - 250
             
             if img_rect.width > max_width or img_rect.height > max_height:
                 scale_factor = min(max_width/img_rect.width, max_height/img_rect.height)
@@ -335,6 +370,26 @@ def draw_text_with_shadow(screen, text, font, x, y, text_color=TEXT_COLOR, shado
     
     return text_surface.get_width()
 
+def get_dynamic_sizes(window_width, window_height):
+    """Calculate dynamic sizes based on current window dimensions"""
+    # Scale factors based on window size
+    width_scale = window_width / INITIAL_WINDOW_WIDTH
+    height_scale = window_height / INITIAL_WINDOW_HEIGHT
+    scale = min(width_scale, height_scale)  # Use the smaller scale to maintain proportions
+    
+    return {
+        'title_font_size': max(int(48 * scale), 24),  # Increased minimum
+        'temp_font_size': max(int(72 * scale), 36),   # Increased minimum
+        'header_font_size': max(int(28 * scale), 20), # Increased minimum
+        'message_font_size': max(int(36 * scale), 24), # Increased minimum
+        'counter_font_size': max(int(20 * scale), 16), # Increased minimum
+        'side_margin': max(int(20 * scale), 15),
+        'top_margin': max(int(20 * scale), 15),
+        'kirby_max_width': window_width - max(int(100 * scale), 80),
+        'kirby_max_height': max(window_height - max(int(250 * scale), 200), 150), # Ensure minimum space
+        'kirby_radius': max(int(100 * scale), 60)
+    }
+
 def main():
     """Main pygame loop"""
     print("🎮 Starting Kirby Weather Display for Lethbridge, Alberta!")
@@ -353,23 +408,40 @@ def main():
             'region': 'Alberta'
         }
     
-    # Initialize display
-    screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
-    pygame.display.set_caption("Kirby Weather Display - Lethbridge, AB")
+    # Initialize display with resizable window
+    screen = pygame.display.set_mode((INITIAL_WINDOW_WIDTH, INITIAL_WINDOW_HEIGHT), pygame.RESIZABLE)
+    pygame.display.set_caption("Kirby Weather Display - Lethbridge, AB (Resizable)")
     clock = pygame.time.Clock()
     
-    # Load Kirby-style fonts
-    title_font = load_kirby_font(48)
-    temp_font = load_kirby_font(72)
-    info_font = load_kirby_font(36)
-    small_font = load_kirby_font(24)
+    # Current window dimensions (will be updated on resize)
+    current_width = INITIAL_WINDOW_WIDTH
+    current_height = INITIAL_WINDOW_HEIGHT
+    
+    # Load Kirby-style fonts (will be recalculated on resize)
+    sizes = get_dynamic_sizes(current_width, current_height)
     
     # Load Kirby image based on temperature/season
-    kirby_image = load_kirby_image_by_temperature(weather_data['temperature'], weather_data['condition'])
+    kirby_image = load_kirby_image_by_temperature(
+        weather_data['temperature'], 
+        weather_data['condition'],
+        sizes['kirby_max_width'],
+        sizes['kirby_max_height']
+    )
     
     # Track last image reload time for cycling
     last_image_reload = time.time()
     image_cycle_interval = 30  # seconds
+    
+    # Track message fetching and rotation
+    last_message_fetch = 0
+    message_fetch_interval = 10  # Check for new messages every 10 seconds
+    all_messages = []  # Store all messages
+    current_message_index = 0  # Index of currently displayed message
+    current_message = None  # Currently displayed message
+    message_display_start = 0
+    message_display_duration = 30  # Show each message for 30 seconds (same as image cycle)
+    last_message_rotation = 0
+    message_rotation_interval = 30  # Rotate messages every 30 seconds
     
     # Main game loop
     running = True
@@ -379,6 +451,22 @@ def main():
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
+            elif event.type == pygame.VIDEORESIZE:
+                # Handle window resize
+                new_width = max(event.w, MIN_WINDOW_WIDTH)
+                new_height = max(event.h, MIN_WINDOW_HEIGHT)
+                screen = pygame.display.set_mode((new_width, new_height), pygame.RESIZABLE)
+                current_width = new_width
+                current_height = new_height
+                sizes = get_dynamic_sizes(current_width, current_height)
+                # Reload image with new size constraints
+                kirby_image = load_kirby_image_by_temperature(
+                    weather_data['temperature'], 
+                    weather_data['condition'],
+                    sizes['kirby_max_width'],
+                    sizes['kirby_max_height']
+                )
+                print(f"🔄 Window resized to {new_width}x{new_height}")
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE or event.key == pygame.K_q:
                     running = False
@@ -388,46 +476,167 @@ def main():
                     new_data = get_weather_data(city)
                     if new_data:
                         weather_data = new_data
+                        sizes = get_dynamic_sizes(current_width, current_height)
                         # Reload image for new temperature/season
-                        kirby_image = load_kirby_image_by_temperature(weather_data['temperature'], weather_data['condition'])
+                        kirby_image = load_kirby_image_by_temperature(
+                            weather_data['temperature'], 
+                            weather_data['condition'],
+                            sizes['kirby_max_width'],
+                            sizes['kirby_max_height']
+                        )
                         last_image_reload = current_time
         
         # Auto-cycle images every 30 seconds
         if current_time - last_image_reload >= image_cycle_interval:
-            kirby_image = load_kirby_image_by_temperature(weather_data['temperature'], weather_data['condition'])
+            sizes = get_dynamic_sizes(current_width, current_height)
+            kirby_image = load_kirby_image_by_temperature(
+                weather_data['temperature'], 
+                weather_data['condition'],
+                sizes['kirby_max_width'],
+                sizes['kirby_max_height']
+            )
             last_image_reload = current_time
+        
+        # Check for new messages periodically
+        if current_time - last_message_fetch >= message_fetch_interval:
+            new_messages = get_all_messages()
+            if new_messages:
+                # Check if we have new messages by comparing list length or latest message
+                if len(new_messages) != len(all_messages) or (new_messages and all_messages and new_messages[-1] != all_messages[-1]):
+                    all_messages = new_messages
+                    print(f"📬 Updated message list: {len(all_messages)} messages available")
+            last_message_fetch = current_time
+        
+        # Rotate through messages every 30 seconds (sync with image cycling)
+        if all_messages and current_time - last_message_rotation >= message_rotation_interval:
+            current_message_index = (current_message_index + 1) % len(all_messages)
+            last_message_rotation = current_time
+            current_message = all_messages[current_message_index]
+            username = current_message.get('username', 'Anonymous')
+            print(f"💌 Showing message {current_message_index + 1}/{len(all_messages)} from {username}")
+        
+        # Initialize message display if we have messages but no current message
+        if all_messages and current_message_index < len(all_messages):
+            current_message = all_messages[current_message_index]
+        else:
+            current_message = None
         
         # Fill background
         screen.fill(BACKGROUND_COLOR)
 
-        # Safe margins and available width for text
-        side_margin = 20
-        top_margin = 20
-        avail_width = WINDOW_WIDTH - side_margin * 2
+        # Get dynamic sizes for current window
+        sizes = get_dynamic_sizes(current_width, current_height)
+        avail_width = current_width - sizes['side_margin'] * 2
 
         # Draw title - auto-fit and centered
         title_text = f"Kirby Weather — {weather_data['city']}, {weather_data.get('region', 'AB')}"
-        dyn_title_font, title_surface = get_fitting_font_and_surface(title_text, 48, avail_width)
-        title_x = (WINDOW_WIDTH - title_surface.get_width()) // 2
-        title_y = top_margin
+        dyn_title_font, title_surface = get_fitting_font_and_surface(title_text, sizes['title_font_size'], avail_width)
+        title_x = (current_width - title_surface.get_width()) // 2
+        title_y = sizes['top_margin']
         draw_text_with_shadow(screen, title_text, dyn_title_font, title_x, title_y)
 
         # Draw Kirby (image or placeholder) - centered under title
-        kirby_center_y = WINDOW_HEIGHT // 2 - 30
+        kirby_center_y = current_height // 2 - int(30 * (current_height / INITIAL_WINDOW_HEIGHT))
         if kirby_image:
-            kirby_rect = kirby_image.get_rect(center=(WINDOW_WIDTH // 2, kirby_center_y))
+            kirby_rect = kirby_image.get_rect(center=(current_width // 2, kirby_center_y))
             screen.blit(kirby_image, kirby_rect)
-            text_start_y = kirby_rect.bottom + 24
+            text_start_y = kirby_rect.bottom + int(24 * (current_height / INITIAL_WINDOW_HEIGHT))
         else:
-            draw_kirby_placeholder(screen, WINDOW_WIDTH // 2, kirby_center_y, 100)
-            text_start_y = kirby_center_y + 100 + 24
+            draw_kirby_placeholder(screen, current_width // 2, kirby_center_y, sizes['kirby_radius'])
+            text_start_y = kirby_center_y + sizes['kirby_radius'] + int(24 * (current_height / INITIAL_WINDOW_HEIGHT))
 
         # Temperature and condition on same line - auto-fit and centered
         temp_condition_text = f"{weather_data['temperature']}°C • {weather_data['condition']}"
-        dyn_temp_font, temp_surface = get_fitting_font_and_surface(temp_condition_text, 72, avail_width)
-        temp_x = (WINDOW_WIDTH - temp_surface.get_width()) // 2
+        dyn_temp_font, temp_surface = get_fitting_font_and_surface(temp_condition_text, sizes['temp_font_size'], avail_width)
+        temp_x = (current_width - temp_surface.get_width()) // 2
         temp_y = text_start_y
         draw_text_with_shadow(screen, temp_condition_text, dyn_temp_font, temp_x, temp_y)
+
+        # Display message if we have one
+        if current_message:
+            message_y = temp_y + temp_surface.get_height() + 30
+            
+            # Extract message data safely
+            username = current_message.get('username', 'Anonymous')
+            if not isinstance(username, str):
+                username = str(username) if username else 'Anonymous'
+            username = username.strip() if username else 'Anonymous'
+            
+            message_text = current_message.get('message', '')
+            if not isinstance(message_text, str):
+                message_text = str(message_text)
+            
+            # Format timestamp nicely - just hour:minute AM/PM
+            timestamp = current_message.get('timestamp', '')
+            formatted_time = ""
+            if timestamp:
+                try:
+                    # Parse ISO timestamp and format nicely
+                    if 'T' in timestamp:
+                        date_part, time_part = timestamp.split('T')
+                        time_only = time_part.split('.')[0]  # Remove microseconds
+                        # Convert to 12-hour format
+                        hour, minute, second = time_only.split(':')
+                        hour_int = int(hour)
+                        ampm = "AM" if hour_int < 12 else "PM"
+                        if hour_int == 0:
+                            hour_int = 12
+                        elif hour_int > 12:
+                            hour_int -= 12
+                        formatted_time = f"{hour_int}:{minute} {ampm}"
+                except Exception as e:
+                    formatted_time = "recently"
+            else:
+                formatted_time = "recently"
+            
+            # Create header with username and time - clean format
+            if not username or username.strip() == '':
+                header_text = f"💌 Message for Kirby • {formatted_time}"
+            else:
+                header_text = f"💌 From {username} • {formatted_time}"
+            
+            dyn_header_font, header_surface = get_fitting_font_and_surface(header_text, sizes['header_font_size'], avail_width, (200, 200, 255))
+            header_x = (current_width - header_surface.get_width()) // 2
+            draw_text_with_shadow(screen, header_text, dyn_header_font, header_x, message_y, (200, 200, 255), (0, 0, 0))
+            
+            # Add message counter as a small line below the header if multiple messages
+            message_text_y = message_y + header_surface.get_height() + int(15 * (current_height / INITIAL_WINDOW_HEIGHT))
+            if len(all_messages) > 1:
+                counter_text = f"Message {current_message_index + 1} of {len(all_messages)}"
+                counter_font, counter_surface = get_fitting_font_and_surface(counter_text, sizes['counter_font_size'], avail_width, (150, 150, 200))
+                counter_x = (current_width - counter_surface.get_width()) // 2
+                draw_text_with_shadow(screen, counter_text, counter_font, counter_x, message_text_y, (150, 150, 200), (0, 0, 0))
+                message_text_y += counter_surface.get_height() + int(10 * (current_height / INITIAL_WINDOW_HEIGHT))
+            
+            # Message text with better formatting
+            
+            # Handle long messages by wrapping
+            words = message_text.split()
+            lines = []
+            current_line = ""
+            test_font = load_kirby_font(sizes['message_font_size'])  # Use dynamic size
+            
+            for word in words:
+                test_line = current_line + (" " if current_line else "") + word
+                test_surface = test_font.render(test_line, True, TEXT_COLOR)
+                if test_surface.get_width() <= avail_width:
+                    current_line = test_line
+                else:
+                    if current_line:
+                        lines.append(current_line)
+                        current_line = word
+                    else:
+                        lines.append(word)  # Single long word
+            
+            if current_line:
+                lines.append(current_line)
+            
+            # Draw message lines with bright yellow color for visibility
+            for i, line in enumerate(lines[:3]):  # Max 3 lines
+                dyn_msg_font, msg_surface = get_fitting_font_and_surface(line, sizes['message_font_size'], avail_width, (255, 255, 150))  # Bright yellow
+                msg_x = (current_width - msg_surface.get_width()) // 2
+                line_y = message_text_y + i * (msg_surface.get_height() + int(8 * (current_height / INITIAL_WINDOW_HEIGHT)))
+                draw_text_with_shadow(screen, line, dyn_msg_font, msg_x, line_y, (255, 255, 150), (0, 0, 0))
 
         # Instructions removed but functionality preserved
         
