@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>✨ Kirby Weather Station ✨</title>
+    <style>
+        /* Modern glassmorphism design */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* Animated background particles */
+        .bg-particles {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .particle {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            animation: float 6s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-20px) rotate(180deg); }
+        }
+
+        /* Glassmorphism container */
+        .container {
+            position: relative;
+            z-index: 1;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+            min-height: 100vh;
+            display: grid;
+            grid-template-columns: 1fr 400px;
+            grid-template-rows: auto 1fr auto;
+            gap: 2rem;
+        }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 2rem;
+            box-shadow: 0 8px 32px rgba(31, 38, 135, 0.37);
+            transition: all 0.3s ease;
+        }
+
+        .glass-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 40px rgba(31, 38, 135, 0.5);
+        }
+
+        /* Header */
+        .header {
+            grid-column: 1 / -1;
+            text-align: center;
+            color: white;
+        }
+
+        .title {
+            font-size: 3rem;
+            font-weight: 700;
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4, #45b7d1);
+            background-size: 300% 300%;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: gradientShift 3s ease infinite;
+        }
+
+        @keyframes gradientShift {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+
+        /* Kirby section */
+        .kirby-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+
+        .kirby-container {
+            position: relative;
+            margin: 2rem 0;
+        }
+
+        .kirby-image {
+            width: 300px;
+            height: 300px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 0 50px rgba(255, 182, 193, 0.5);
+            animation: kirbyFloat 3s ease-in-out infinite;
+        }
+
+        @keyframes kirbyFloat {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-15px); }
+        }
+
+        .kirby-glow {
+            position: absolute;
+            top: -20px;
+            left: -20px;
+            right: -20px;
+            bottom: -20px;
+            background: radial-gradient(circle, rgba(255, 182, 193, 0.3) 0%, transparent 70%);
+            border-radius: 50%;
+            animation: glowPulse 2s ease-in-out infinite alternate;
+        }
+
+        @keyframes glowPulse {
+            0% { transform: scale(1); opacity: 0.5; }
+            100% { transform: scale(1.1); opacity: 0.8; }
+        }
+
+        /* Weather section */
+        .weather-section {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .weather-main {
+            text-align: center;
+            color: white;
+        }
+
+        .temperature {
+            font-size: 4rem;
+            font-weight: 300;
+            margin-bottom: 0.5rem;
+            text-shadow: 0 2px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .condition {
+            font-size: 1.5rem;
+            opacity: 0.9;
+            margin-bottom: 1rem;
+        }
+
+        .weather-details {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .weather-item {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 1rem;
+            border-radius: 10px;
+            text-align: center;
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .weather-label {
+            font-size: 0.9rem;
+            opacity: 0.7;
+            margin-bottom: 0.5rem;
+        }
+
+        .weather-value {
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+
+        /* Messages section */
+        .messages-section {
+            grid-column: 1 / -1;
+            color: white;
+        }
+
+        .message-card {
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 15px;
+            padding: 1.5rem;
+            margin: 1rem 0;
+            border-left: 4px solid #4ecdc4;
+            transition: all 0.3s ease;
+        }
+
+        .message-card:hover {
+            background: rgba(255, 255, 255, 0.12);
+            transform: translateX(10px);
+        }
+
+        .message-text {
+            font-size: 1.1rem;
+            line-height: 1.6;
+            margin-bottom: 1rem;
+        }
+
+        .message-author {
+            font-size: 0.9rem;
+            opacity: 0.7;
+            text-align: right;
+        }
+
+        /* Loading animation */
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Responsive design */
+        @media (max-width: 768px) {
+            .container {
+                grid-template-columns: 1fr;
+                padding: 1rem;
+            }
+            
+            .title {
+                font-size: 2rem;
+            }
+            
+            .kirby-image {
+                width: 200px;
+                height: 200px;
+            }
+            
+            .temperature {
+                font-size: 3rem;
+            }
+        }
+
+        /* Time display */
+        .time-display {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            padding: 1rem;
+            border-radius: 15px;
+            color: white;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            z-index: 10;
+        }
+
+        .current-time {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .current-date {
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+    </style>
+</head>
+<body>
+    <!-- Animated background particles -->
+    <div class="bg-particles" id="particles"></div>
+
+    <!-- Time display -->
+    <div class="time-display">
+        <div class="current-time" id="currentTime">--:--</div>
+        <div class="current-date" id="currentDate">Loading...</div>
+    </div>
+
+    <div class="container">
+        <!-- Header -->
+        <header class="header glass-card">
+            <h1 class="title">✨ Kirby Weather Station ✨</h1>
+            <p style="color: rgba(255, 255, 255, 0.8); margin-top: 1rem;">Lethbridge, Alberta • Real-time Weather</p>
+        </header>
+
+        <!-- Main content area -->
+        <main class="kirby-section glass-card">
+            <div class="kirby-container">
+                <div class="kirby-glow"></div>
+                <img id="kirbyImage" class="kirby-image" src="/static/images/kirby.png" alt="Kirby" 
+                     onerror="this.style.display='none'; document.getElementById('kirbyFallback').style.display='block';">
+                <div id="kirbyFallback" style="display: none; width: 300px; height: 300px; background: #FFB6C1; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 2rem;">🌸</div>
+            </div>
+            
+            <h2 style="color: white; margin: 1rem 0;">Season: <span id="currentSeason">Loading...</span></h2>
+            
+            <div style="background: rgba(255, 255, 255, 0.1); padding: 1rem; border-radius: 10px; margin-top: 1rem;">
+                <p style="color: rgba(255, 255, 255, 0.9);">
+                    Kirby changes with the seasons! Temperature determines which seasonal Kirby you'll see.
+                </p>
+            </div>
+        </main>
+
+        <!-- Weather section -->
+        <aside class="weather-section">
+            <div class="glass-card weather-main">
+                <div class="temperature" id="temperature">
+                    <span class="loading"></span>
+                </div>
+                <div class="condition" id="condition">Loading weather...</div>
+                
+                <div class="weather-details">
+                    <div class="weather-item">
+                        <div class="weather-label">Feels like</div>
+                        <div class="weather-value" id="feelsLike">--°</div>
+                    </div>
+                    <div class="weather-item">
+                        <div class="weather-label">Humidity</div>
+                        <div class="weather-value" id="humidity">--%</div>
+                    </div>
+                    <div class="weather-item">
+                        <div class="weather-label">Wind Speed</div>
+                        <div class="weather-value" id="windSpeed">-- km/h</div>
+                    </div>
+                    <div class="weather-item">
+                        <div class="weather-label">Last Updated</div>
+                        <div class="weather-value" id="lastUpdated">--:--</div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Messages section -->
+        <section class="messages-section glass-card">
+            <h3 style="margin-bottom: 1.5rem; font-size: 1.5rem;">💌 Community Messages</h3>
+            <div id="messagesContainer">
+                <div class="loading" style="margin: 2rem auto; display: block;"></div>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        // Create floating particles
+        function createParticles() {
+            const particlesContainer = document.getElementById('particles');
+            const particleCount = 50;
+
+            for (let i = 0; i < particleCount; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                
+                // Random size and position
+                const size = Math.random() * 4 + 2;
+                particle.style.width = size + 'px';
+                particle.style.height = size + 'px';
+                particle.style.left = Math.random() * 100 + '%';
+                particle.style.top = Math.random() * 100 + '%';
+                particle.style.animationDelay = Math.random() * 6 + 's';
+                particle.style.animationDuration = (Math.random() * 3 + 3) + 's';
+                
+                particlesContainer.appendChild(particle);
+            }
+        }
+
+        // Update time display
+        function updateTime() {
+            const now = new Date();
+            const timeOptions = { hour: '2-digit', minute: '2-digit' };
+            const dateOptions = { 
+                weekday: 'long', 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+            };
+
+            document.getElementById('currentTime').textContent = now.toLocaleTimeString([], timeOptions);
+            document.getElementById('currentDate').textContent = now.toLocaleDateString([], dateOptions);
+        }
+
+        // Load weather data
+        async function loadWeatherData() {
+            try {
+                const response = await fetch('/api/weather');
+                const weather = await response.json();
+                
+                document.getElementById('temperature').textContent = weather.temperature + '°C';
+                document.getElementById('condition').textContent = weather.condition;
+                document.getElementById('feelsLike').textContent = weather.feels_like + '°';
+                document.getElementById('humidity').textContent = weather.humidity + '%';
+                document.getElementById('windSpeed').textContent = weather.wind_speed + ' km/h';
+                document.getElementById('currentSeason').textContent = weather.season.charAt(0).toUpperCase() + weather.season.slice(1);
+                document.getElementById('lastUpdated').textContent = new Date().toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
+                
+                // Update Kirby image based on season
+                const kirbyImage = document.getElementById('kirbyImage');
+                kirbyImage.src = `/static/images/${weather.season}/kirby.png`;
+                
+            } catch (error) {
+                console.error('Error loading weather:', error);
+                document.getElementById('temperature').textContent = 'Error';
+                document.getElementById('condition').textContent = 'Unable to load weather data';
+            }
+        }
+
+        // Load messages
+        async function loadMessages() {
+            try {
+                const response = await fetch('/api/messages');
+                const messages = await response.json();
+                
+                const container = document.getElementById('messagesContainer');
+                container.innerHTML = '';
+                
+                messages.slice(0, 5).forEach(message => {
+                    const messageCard = document.createElement('div');
+                    messageCard.className = 'message-card';
+                    messageCard.innerHTML = `
+                        <div class="message-text">${message.message}</div>
+                        <div class="message-author">— ${message.name}</div>
+                    `;
+                    container.appendChild(messageCard);
+                });
+                
+            } catch (error) {
+                console.error('Error loading messages:', error);
+                document.getElementById('messagesContainer').innerHTML = 
+                    '<p style="color: rgba(255, 255, 255, 0.7);">Unable to load messages</p>';
+            }
+        }
+
+        // Initialize everything
+        document.addEventListener('DOMContentLoaded', function() {
+            createParticles();
+            updateTime();
+            loadWeatherData();
+            loadMessages();
+            
+            // Update time every second
+            setInterval(updateTime, 1000);
+            
+            // Update weather every 5 minutes
+            setInterval(loadWeatherData, 5 * 60 * 1000);
+            
+            // Update messages every 30 seconds
+            setInterval(loadMessages, 30 * 1000);
+        });
+
+        // Add some interactive elements
+        document.addEventListener('click', function(e) {
+            // Create a ripple effect on glass cards
+            if (e.target.closest('.glass-card')) {
+                const card = e.target.closest('.glass-card');
+                const ripple = document.createElement('div');
+                const rect = card.getBoundingClientRect();
+                const size = 60;
+                const x = e.clientX - rect.left - size / 2;
+                const y = e.clientY - rect.top - size / 2;
+                
+                ripple.style.cssText = `
+                    position: absolute;
+                    width: ${size}px;
+                    height: ${size}px;
+                    border-radius: 50%;
+                    background: rgba(255, 255, 255, 0.3);
+                    left: ${x}px;
+                    top: ${y}px;
+                    animation: ripple 0.6s ease-out;
+                    pointer-events: none;
+                `;
+                
+                card.style.position = 'relative';
+                card.appendChild(ripple);
+                
+                setTimeout(() => ripple.remove(), 600);
+            }
+        });
+
+        // Add ripple animation
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes ripple {
+                0% { transform: scale(0); opacity: 1; }
+                100% { transform: scale(4); opacity: 0; }
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
+</body>
+</html>
