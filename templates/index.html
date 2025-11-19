@@ -269,7 +269,7 @@
             <h2 class="messages-title">📬 Recent Messages to Kirby</h2>
             
             {% if messages %}
-                {% for msg in messages[-5:] | reverse %}
+                {% for msg in messages | reverse %}
                 <div class="message-item">
                     <div class="message-header">{{ msg.username or 'Anonymous' }}</div>
                     <div class="message-text">{{ msg.message }}</div>

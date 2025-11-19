@@ -43,6 +43,11 @@ def get_weather_openweather(city="London"):
         temperature = round(data['main']['temp'])
         feels_like = round(data['main']['feels_like'])
         humidity = data['main']['humidity']
+        
+        # Get wind data (convert from m/s to km/h)
+        wind_speed = data.get('wind', {}).get('speed', 0) * 3.6  # m/s to km/h
+        wind_speed = round(wind_speed, 1)
+        
         city_name = data['name']
         country = data['sys']['country']
         
@@ -52,6 +57,7 @@ def get_weather_openweather(city="London"):
             'temperature': temperature,
             'feels_like': feels_like,
             'humidity': humidity,
+            'wind_speed': wind_speed,
             'city': city_name,
             'country': country
         }
@@ -94,6 +100,10 @@ def get_weather_weatherapi(city="London"):
         temperature = round(data['current']['temp_c'])
         feels_like = round(data['current']['feelslike_c'])
         humidity = data['current']['humidity']
+        
+        # Get wind data (already in km/h)
+        wind_speed = round(data['current']['wind_kph'], 1)
+        
         city_name = data['location']['name']
         country = data['location']['country']
         
@@ -103,6 +113,7 @@ def get_weather_weatherapi(city="London"):
             'temperature': temperature,
             'feels_like': feels_like,
             'humidity': humidity,
+            'wind_speed': wind_speed,
             'city': city_name,
             'country': country
         }
@@ -129,6 +140,7 @@ def display_weather(weather_data):
     print(f"☁️  Condition: {weather_data['condition']}")
     print(f"📝 Description: {weather_data['description'].title()}")
     print(f"💧 Humidity: {weather_data['humidity']}%")
+    print(f"💨 Wind: {weather_data['wind_speed']} km/h")
     print("="*50)
     
     # Simple Kirby mood based on condition

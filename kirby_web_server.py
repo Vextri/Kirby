@@ -72,8 +72,8 @@ def save_message(username, message):
         
         messages.append(new_message)
         
-        # Keep only last 10 messages
-        messages = messages[-10:]
+        # Keep only last 50 messages
+        messages = messages[-50:]
         
         # Save back to file
         with open(MESSAGES_FILE, 'w') as f:

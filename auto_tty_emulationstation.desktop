@@ -1,0 +1,11 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Auto TTY EmulationStation
+Comment=Automatically switch to TTY4, login, and launch EmulationStation
+Exec=/home/kirby/Desktop/kirby/auto_tty_launch.sh
+Icon=applications-games
+Terminal=true
+Categories=Game;
+Path=/home/kirby/Desktop/kirby/
+StartupNotify=false
