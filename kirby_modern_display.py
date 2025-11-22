@@ -414,6 +414,14 @@ class ModernKirbyDisplay:
         message_text = self.current_message.get('message', 'No message')
         from_text = f"- {self.current_message.get('name', 'Anonymous')}"
         
+        # Create a slightly larger font for message text
+        try:
+            message_font = pygame.font.Font("fonts/kirby-classic.ttf", max(10, int(22 * self.scale)))
+            author_font = pygame.font.Font("fonts/kirby-classic.ttf", max(10, int(22 * self.scale)))
+        except:
+            message_font = pygame.font.Font(None, max(10, int(22 * self.scale)))
+            author_font = pygame.font.Font(None, max(10, int(22 * self.scale)))
+        
         # Word wrap for message
         words = message_text.split()
         lines = []
@@ -422,7 +430,7 @@ class ModernKirbyDisplay:
         
         for word in words:
             test_line = ' '.join(current_line + [word])
-            test_surface = self.font_small.render(test_line, True, Colors.TEXT_SECONDARY)
+            test_surface = message_font.render(test_line, True, Colors.TEXT_SECONDARY)
             if test_surface.get_width() > max_width and current_line:
                 lines.append(' '.join(current_line))
                 current_line = [word]
@@ -435,13 +443,13 @@ class ModernKirbyDisplay:
         # Draw message lines
         message_y = message_start_y
         for line in lines:
-            line_surface = self.font_small.render(line, True, Colors.TEXT_SECONDARY)
+            line_surface = message_font.render(line, True, Colors.TEXT_SECONDARY)
             line_rect = line_surface.get_rect(centerx=x + width//2, y=message_y)
             self.screen.blit(line_surface, line_rect)
-            message_y += int(18 * self.scale)
+            message_y += int(20 * self.scale)
         
         # Draw author
-        from_surface = self.font_small.render(from_text, True, Colors.TEXT_ACCENT)
+        from_surface = author_font.render(from_text, True, Colors.TEXT_ACCENT)
         from_rect = from_surface.get_rect(right=x + width - int(16 * self.scale), bottom=y + height - int(12 * self.scale))
         self.screen.blit(from_surface, from_rect)
     
@@ -481,6 +489,49 @@ class ModernKirbyDisplay:
         status_surface = self.font_small.render(status_text, True, status_color)
         status_rect = status_surface.get_rect(centerx=time_bg_x + bg_w//2, y=date_rect.bottom + int(4 * self.scale))
         self.screen.blit(status_surface, status_rect)
+    
+    def draw_date_header(self, x, y, width, height):
+        """Draw date header at top of right section (matching poster style)"""
+        # Glass background for date
+        date_bg = self.create_glass_surface(width, height, 30)
+        self.screen.blit(date_bg, (x, y))
+        
+        # Get current date and time in comprehensive format
+        now = datetime.now()
+        date_text = now.strftime("%m/%Y")  # MM/YYYY
+        time_text = now.strftime("%H:%M:%S")  # HH:MM:SS
+        
+        # Combine date and time inline
+        combined_text = f"{date_text}  {time_text}"
+        
+        # Draw combined date/time in large, centered text - pink color
+        combined_surface = self.font_large.render(combined_text, True, Colors.TEXT_TITLE)
+        combined_rect = combined_surface.get_rect(centerx=x + width // 2, centery=y + height // 2)
+        self.screen.blit(combined_surface, combined_rect)
+    
+    def draw_vertical_title_sidebar(self, x, y, width, height):
+        """Draw vertical title sidebar on the right (matching 'EMULATION' vertical text style)"""
+        # Glass background for sidebar
+        sidebar_bg = self.create_glass_surface(width, height, 35, pink_tint=True)
+        self.screen.blit(sidebar_bg, (x, y))
+        
+        # Get the original title: "Kirby's Dream Weather Station"
+        title_text = "Kirby's Dream Weather Station"
+        
+        # Draw title vertically with larger spacing
+        char_height = int(28 * self.scale)  # Increased from 20 to 28
+        chars = list(title_text)
+        
+        # Calculate starting position to center vertically
+        total_height = len(chars) * char_height
+        start_y = y + (height - total_height) // 2
+        
+        # Draw each character vertically using medium font instead of small
+        for i, char in enumerate(chars):
+            char_surface = self.font_medium.render(char, True, Colors.TEXT_TITLE)
+            char_x = x + width // 2 - char_surface.get_width() // 2
+            char_y = start_y + i * char_height
+            self.screen.blit(char_surface, (char_x, char_y))
     
     def toggle_fullscreen(self):
         """Toggle between fullscreen and windowed mode"""
@@ -952,61 +1003,59 @@ class ModernKirbyDisplay:
             self.last_message_update = current_time
     
     def draw(self):
-        """Main draw function"""
+        """Main draw function - New layout matching Hamlet poster style"""
         # Update time for animations
         self.time = pygame.time.get_ticks()
         
         # Clear screen with gradient
         self.draw_gradient_background()
         
-        # Draw floating Kirby (left side)
-        kirby_x = WINDOW_WIDTH // 4
-        # kirby_y = WINDOW_HEIGHT // 2
-        kirby_y = WINDOW_HEIGHT - int(350 * self.scale)
+        # Calculate layout dimensions
+        left_section_width = int(WINDOW_WIDTH * 0.55)  # Left side for Kirby (larger)
+        title_box_width = int(60 * self.scale)  # Right sidebar width
+        center_section_width = WINDOW_WIDTH - left_section_width - title_box_width  # Middle section (no overlap)
+        
+        # ===== LEFT SECTION: Kirby Image (Large focal point) =====
+        kirby_x = left_section_width // 2
+        kirby_y = WINDOW_HEIGHT // 2 + int(20 * self.scale)
         self.draw_floating_kirby(kirby_x, kirby_y)
         
-        # Draw weather card (top right)
-        weather_card_width = max(120, int(280 * self.scale))
-        weather_card_height = max(120, int(300 * self.scale))
-        weather_x = WINDOW_WIDTH - weather_card_width - int(10 * self.scale)
-        weather_y = int(20 * self.scale) + int(100 * self.scale)
-        self.draw_weather_card(weather_x, weather_y, weather_card_width, weather_card_height)
+        # ===== CENTER SECTION (Top to Bottom) =====
+        center_start_x = left_section_width + int(10 * self.scale)
+        right_padding = int(8 * self.scale)
         
-        # Draw EmulationStation button (right side, between weather and message cards)
-        button_width = max(120, int(280 * self.scale))
-        button_height = max(48, int(60 * self.scale))
-        button_x = WINDOW_WIDTH - button_width - int(12 * self.scale)
-        button_y = weather_y + weather_card_height + int(8 * self.scale)
-        self.draw_emulationstation_button(button_x, button_y, button_width, button_height)
+        # 1. DATE/TIME at the very top (above message)
+        date_height = int(50 * self.scale)
+        date_y = int(10 * self.scale)
+        self.draw_date_header(center_start_x + right_padding, date_y, center_section_width - right_padding * 2, date_height)
         
-        # Draw message card (bottom right) - increased size for better text spacing
-        message_card_width = max(120, int(380 * self.scale))
-        message_card_height = max(80, int(220 * self.scale))
-        message_x = WINDOW_WIDTH - message_card_width - int(40 * self.scale)
-        message_y = WINDOW_HEIGHT - message_card_height - int(24 * self.scale)
-        self.draw_message_card(message_x, message_y, message_card_width, message_card_height)
+        # 2. COMMUNITY MESSAGE CARD (top-right, below date) - increased by 200px
+        message_card_width = center_section_width - right_padding * 2
+        message_card_height = int(320 * self.scale)  # Increased from 120 to 320
+        message_y = date_y + date_height + int(5 * self.scale)
+        self.draw_message_card(center_start_x + right_padding, message_y, message_card_width, message_card_height)
         
-        # Draw time display
-        self.draw_time_display()
+        # 3 & 4. STATS BOX and EMULATION STATION SIDE BY SIDE (below message)
+        # Split the remaining space between stats (left) and emulation (right)
+        stats_emulation_y = message_y + message_card_height + int(8 * self.scale)
+        stats_emulation_height = int(240 * self.scale)
+        available_width = center_section_width - right_padding * 2
         
-        # Draw title with Kirby-themed styling
-        title_text = "🌸 Kirby's Dream Weather Station 🌸"
+        # Stats box takes 60% of width, EmulationStation takes 40%
+        stats_width = int(available_width * 0.60)
+        emulation_width = int(available_width * 0.40)
+        gap = int(6 * self.scale)
         
-        # Create a gradient title effect
-        title_surface = self.font_large.render(title_text, True, Colors.TEXT_TITLE)
-        title_rect = title_surface.get_rect(centerx=WINDOW_WIDTH // 2, y=int(10 * self.scale) + int(10 * self.scale))
+        # Draw stats box (left side)
+        stats_x = center_start_x + right_padding
+        self.draw_weather_card(stats_x, stats_emulation_y, stats_width, stats_emulation_height)
         
-        # Title background with pink theme
-        title_bg = self.create_glass_surface(title_surface.get_width() + int(60 * self.scale), max(48, int(80 * self.scale)), 40, pink_tint=True)
-        title_bg_rect = title_bg.get_rect(center=title_rect.center)
-        self.screen.blit(title_bg, title_bg_rect)
+        # Draw EmulationStation button (right side, vertical)
+        emulation_x = stats_x + stats_width + gap
+        self.draw_emulationstation_button(emulation_x, stats_emulation_y, emulation_width, stats_emulation_height)
         
-        # Add a shadow effect for the title
-        shadow_surface = self.font_large.render(title_text, True, Colors.KIRBY_DARKER)
-        shadow_rect = shadow_surface.get_rect(centerx=WINDOW_WIDTH // 2 + int(2 * self.scale), y=int(12 * self.scale))
-        self.screen.blit(shadow_surface, shadow_rect)
-        self.screen.blit(title_bg, title_bg_rect)
-        self.screen.blit(title_surface, title_rect)
+        # 5. VERTICAL TITLE SIDEBAR (right edge, full height)
+        self.draw_vertical_title_sidebar(WINDOW_WIDTH - title_box_width, 0, title_box_width, WINDOW_HEIGHT)
         
         # Draw EmulationStation launch overlay (if active) - must be last to appear on top
         self.draw_launch_overlay()
