@@ -1149,8 +1149,8 @@ class ModernKirbyDisplay:
 if __name__ == "__main__":
     import sys
     
-    # Check for fullscreen argument
-    fullscreen = "--fullscreen" in sys.argv or "-f" in sys.argv
+    # Check for fullscreen argument - default to True (auto fullscreen)
+    fullscreen = "--windowed" not in sys.argv and "-w" not in sys.argv
     
     try:
         app = ModernKirbyDisplay(fullscreen=fullscreen)
