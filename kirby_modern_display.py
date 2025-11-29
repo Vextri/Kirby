@@ -137,7 +137,7 @@ class ModernKirbyDisplay:
         self.load_weather_data()
         self.load_all_messages()
         self.check_server_availability()
-        
+    
     def create_glass_surface(self, width, height, alpha=30, pink_tint=True):
         """Create a surface with Kirby-themed glassmorphism effect"""
         surface = pygame.Surface((width, height), pygame.SRCALPHA)
@@ -314,10 +314,36 @@ class ModernKirbyDisplay:
         icon_area_height = height // 3
 
         # Temperature (large, centered)
-        temp_text = f"{self.current_weather.get('temperature', 'N/A')}°"
-        temp_surface = self.font_large.render(temp_text, True, Colors.TEXT_PRIMARY)
-        temp_rect = temp_surface.get_rect(centerx=x + width // 2, y=y + int(20 * self.scale))
-        self.screen.blit(temp_surface, temp_rect)
+        temp_value = self.current_weather.get('temperature', 'N/A')
+        
+        # Handle negative temperatures by rendering minus sign separately with system font
+        if isinstance(temp_value, (int, float)) and temp_value < 0:
+            # Render minus sign with system font (supports all glyphs)
+            minus_font = pygame.font.Font(None, max(12, int(42 * self.scale)))
+            minus_surface = minus_font.render("-", True, Colors.TEXT_PRIMARY)
+            
+            # Render temperature number with Kirby font
+            temp_text = f"{abs(temp_value)}°"
+            temp_surface = self.font_large.render(temp_text, True, Colors.TEXT_PRIMARY)
+            
+            # Calculate total width and positioning
+            total_width = minus_surface.get_width() + temp_surface.get_width()
+            start_x = x + width // 2 - total_width // 2
+            temp_y = y + int(20 * self.scale)
+            
+            # Lower the minus sign to align better with temperature
+            minus_offset = int(8 * self.scale)  # Adjust vertical position
+            
+            # Blit minus sign then temperature
+            self.screen.blit(minus_surface, (start_x, temp_y + minus_offset))
+            self.screen.blit(temp_surface, (start_x + minus_surface.get_width(), temp_y))
+            temp_rect = pygame.Rect(start_x, temp_y, total_width, temp_surface.get_height())
+        else:
+            # Positive or zero temperature - render normally
+            temp_text = f"{temp_value}°"
+            temp_surface = self.font_large.render(temp_text, True, Colors.TEXT_PRIMARY)
+            temp_rect = temp_surface.get_rect(centerx=x + width // 2, y=y + int(20 * self.scale))
+            self.screen.blit(temp_surface, temp_rect)
 
         # Location (smaller, below temp)
         location_text = "Lethbridge, AB"
@@ -341,17 +367,75 @@ class ModernKirbyDisplay:
 
         # Additional weather details
         details_y = condition_rect.bottom + int(12 * self.scale)
-        details = [
-            f"Feels like: {self.current_weather.get('feels_like', 'N/A')}°",
-            f"Humidity: {self.current_weather.get('humidity', 'N/A')}%",
-            f"Wind: {self.current_weather.get('wind_speed', 'N/A')} km/h"
-        ]
-
-        for detail in details:
-            detail_surface = self.font_small.render(detail, True, Colors.TEXT_SECONDARY)
+        
+        # Handle feels like temperature with proper negative sign
+        feels_like_value = self.current_weather.get('feels_like', 'N/A')
+        if isinstance(feels_like_value, (int, float)) and feels_like_value < 0:
+            # Render with system font for minus sign
+            system_font_small = pygame.font.Font(None, max(8, int(21 * self.scale)))
+            
+            before_text = "Feels like: "
+            minus_text = "-"
+            temp_text = f"{abs(feels_like_value)}°"
+            
+            before_surface = self.font_small.render(before_text, True, Colors.TEXT_SECONDARY)
+            minus_surface = system_font_small.render(minus_text, True, Colors.TEXT_SECONDARY)
+            temp_surface = self.font_small.render(temp_text, True, Colors.TEXT_SECONDARY)
+            
+            total_width = before_surface.get_width() + minus_surface.get_width() + temp_surface.get_width()
+            start_x = x + width // 2 - total_width // 2
+            
+            self.screen.blit(before_surface, (start_x, details_y))
+            minus_offset = int(4 * self.scale)
+            self.screen.blit(minus_surface, (start_x + before_surface.get_width(), details_y + minus_offset))
+            self.screen.blit(temp_surface, (start_x + before_surface.get_width() + minus_surface.get_width(), details_y))
+            details_y += int(24 * self.scale)
+        else:
+            feels_like_text = f"Feels like: {feels_like_value}°"
+            detail_surface = self.font_small.render(feels_like_text, True, Colors.TEXT_SECONDARY)
             detail_rect = detail_surface.get_rect(centerx=x + width // 2, y=details_y)
             self.screen.blit(detail_surface, detail_rect)
             details_y += int(24 * self.scale)
+        
+        # Humidity detail
+        humidity_text = f"Humidity: {self.current_weather.get('humidity', 'N/A')}%"
+        detail_surface = self.font_small.render(humidity_text, True, Colors.TEXT_SECONDARY)
+        detail_rect = detail_surface.get_rect(centerx=x + width // 2, y=details_y)
+        self.screen.blit(detail_surface, detail_rect)
+        details_y += int(24 * self.scale)
+        
+        # Wind detail with proper decimal point
+        wind_value = self.current_weather.get('wind_speed', 'N/A')
+        if isinstance(wind_value, (int, float)) and '.' in str(wind_value):
+            # Split on decimal point and render with system font for the period
+            system_font_small = pygame.font.Font(None, max(8, int(21 * self.scale)))
+            
+            wind_str = str(wind_value)
+            before_decimal, after_decimal = wind_str.split('.')
+            
+            before_text = f"Wind: {before_decimal}"
+            period_text = "."
+            after_text = f"{after_decimal} km/h"
+            
+            before_surface = self.font_small.render(before_text, True, Colors.TEXT_SECONDARY)
+            period_surface = system_font_small.render(period_text, True, Colors.TEXT_SECONDARY)
+            after_surface = self.font_small.render(after_text, True, Colors.TEXT_SECONDARY)
+            
+            total_width = before_surface.get_width() + period_surface.get_width() + after_surface.get_width()
+            start_x = x + width // 2 - total_width // 2
+            
+            # Move period down to align properly
+            period_offset_y = int(8 * self.scale)
+            
+            self.screen.blit(before_surface, (start_x, details_y))
+            self.screen.blit(period_surface, (start_x + before_surface.get_width(), details_y + period_offset_y))
+            self.screen.blit(after_surface, (start_x + before_surface.get_width() + period_surface.get_width(), details_y))
+        else:
+            wind_text = f"Wind: {wind_value} km/h"
+            detail_surface = self.font_small.render(wind_text, True, Colors.TEXT_SECONDARY)
+            detail_rect = detail_surface.get_rect(centerx=x + width // 2, y=details_y)
+            self.screen.blit(detail_surface, detail_rect)
+        details_y += int(24 * self.scale)
     
     def draw_message_card(self, x, y, width, height):
         """Draw modern message display card with click interaction"""
@@ -380,21 +464,67 @@ class ModernKirbyDisplay:
         self.screen.blit(card_surface, (x, y))
         
         # Title with message count and new indicator
-        title_text = "💌 Community Message"
+        title_base = "💌 Community Message"
         
+        # Build title with custom slash rendering if needed
         if len(self.messages) > 1:
-            title_text += f" ({self.current_message_index + 1}/{len(self.messages)})"
+            # Use system font for the slash (bigger size), Kirby font for everything else
+            system_font = pygame.font.Font(None, max(10, int(34 * self.scale)))
             
-        if self.has_new_messages:
-            title_text += " 🆕"
-        
-        # Add unread dot for current message
-        if self.is_current_message_unread():
-            title_text += " 🔴"
+            # Render parts separately
+            before_text = f"{title_base} ({self.current_message_index + 1}"
+            slash_text = "/"
+            after_text = f"{len(self.messages)})"
             
-        title_surface = self.font_medium.render(title_text, True, Colors.TEXT_PRIMARY)
-        title_rect = title_surface.get_rect(centerx=x + width//2, y=y + int(16 * self.scale))
-        self.screen.blit(title_surface, title_rect)
+            before_surface = self.font_medium.render(before_text, True, Colors.TEXT_PRIMARY)
+            slash_surface = system_font.render(slash_text, True, Colors.TEXT_PRIMARY)
+            after_surface = self.font_medium.render(after_text, True, Colors.TEXT_PRIMARY)
+            
+            # Calculate total width
+            total_width = before_surface.get_width() + slash_surface.get_width() + after_surface.get_width()
+            
+            # Add new/unread indicators width
+            indicator_text = ""
+            if self.has_new_messages:
+                indicator_text += " 🆕"
+            if self.is_current_message_unread():
+                indicator_text += " 🔴"
+            
+            if indicator_text:
+                indicator_surface = self.font_medium.render(indicator_text, True, Colors.TEXT_PRIMARY)
+                total_width += indicator_surface.get_width()
+            
+            # Calculate starting position for centering
+            start_x = x + width//2 - total_width // 2
+            title_y = y + int(16 * self.scale)
+            
+            # Blit all parts
+            current_x = start_x
+            self.screen.blit(before_surface, (current_x, title_y))
+            current_x += before_surface.get_width()
+            # Move slash slightly to the right and down
+            slash_offset_x = int(2 * self.scale)
+            slash_offset_y = int(3 * self.scale)
+            self.screen.blit(slash_surface, (current_x + slash_offset_x, title_y + slash_offset_y))
+            current_x += slash_surface.get_width() + slash_offset_x
+            self.screen.blit(after_surface, (current_x, title_y))
+            current_x += after_surface.get_width()
+            
+            if indicator_text:
+                self.screen.blit(indicator_surface, (current_x, title_y))
+            
+            title_rect = pygame.Rect(start_x, title_y, total_width, before_surface.get_height())
+        else:
+            # No message count, render normally
+            title_text = title_base
+            if self.has_new_messages:
+                title_text += " 🆕"
+            if self.is_current_message_unread():
+                title_text += " 🔴"
+                
+            title_surface = self.font_medium.render(title_text, True, Colors.TEXT_PRIMARY)
+            title_rect = title_surface.get_rect(centerx=x + width//2, y=y + int(16 * self.scale))
+            self.screen.blit(title_surface, title_rect)
         
         # Click hint if multiple messages
         if len(self.messages) > 1:
@@ -646,7 +776,7 @@ class ModernKirbyDisplay:
             return "Unknown"
     
     def draw_emulationstation_button(self, x, y, width, height):
-        """Draw EmulationStation launch button"""
+        """Draw EmulationStation launch button with Rick image"""
         # Store click area for interaction
         self.emulationstation_button_rect = pygame.Rect(x, y, width, height)
         
@@ -660,22 +790,47 @@ class ModernKirbyDisplay:
         
         self.screen.blit(button_surface, (x, y))
         
-        # Button icon and text with improved spacing
-        icon_text = "🎮"
-        icon_surface = self.font_medium.render(icon_text, True, Colors.TEXT_PRIMARY)
-        icon_rect = icon_surface.get_rect(centerx=x + width//2, y=y + int(-20 * self.scale))  # Move icon higher
-        self.screen.blit(icon_surface, icon_rect)
+        # Try to load and display Rick image
+        rick_loaded = False
+        try:
+            rick_image = pygame.image.load("images/Rick.png")
+            # Scale the image to fit inside the button with padding
+            padding = int(20 * self.scale)
+            max_img_width = width - padding * 2
+            max_img_height = height * 0.6  # Take up 60% of height to leave room for text
+            
+            # Calculate scaling to fit within the box
+            img_width = rick_image.get_width()
+            img_height = rick_image.get_height()
+            scale_w = max_img_width / img_width
+            scale_h = max_img_height / img_height
+            scale_factor = min(scale_w, scale_h)
+            
+            new_width = int(img_width * scale_factor)
+            new_height = int(img_height * scale_factor)
+            scaled_rick = pygame.transform.scale(rick_image, (new_width, new_height))
+            
+            # Place image in upper portion of button
+            rick_rect = scaled_rick.get_rect(centerx=x + width // 2, y=y + int(15 * self.scale))
+            self.screen.blit(scaled_rick, rick_rect)
+            rick_loaded = True
+            text_start_y = rick_rect.bottom + int(8 * self.scale)
+        except Exception as e:
+            # If image fails, use full height for text
+            print(f"⚠️ Could not load Rick image: {e}")
+            text_start_y = y + int(10 * self.scale)
         
-        # Button label (brown text) - move up closer to icon
+        # Draw EmulationStation text below image (or centered if no image)
+        # Button label (brown text)
         label_text = "EmulationStation"
         label_surface = self.font_small.render(label_text, True, Colors.TEXT_SECONDARY)
-        label_rect = label_surface.get_rect(centerx=x + width//2, y=icon_rect.bottom + int(4 * self.scale))  # Closer to icon
+        label_rect = label_surface.get_rect(centerx=x + width//2, y=text_start_y)
         self.screen.blit(label_surface, label_rect)
         
-        # Subtitle (pink text) - move under the brown text
+        # Subtitle (pink text)
         subtitle_text = "Launch Games"
         subtitle_surface = self.font_small.render(subtitle_text, True, Colors.TEXT_ACCENT)
-        subtitle_rect = subtitle_surface.get_rect(centerx=x + width//2, y=label_rect.bottom + int(6 * self.scale))  # Under brown text
+        subtitle_rect = subtitle_surface.get_rect(centerx=x + width//2, y=label_rect.bottom + int(4 * self.scale))
         self.screen.blit(subtitle_surface, subtitle_rect)
     
     def draw_launch_overlay(self):
