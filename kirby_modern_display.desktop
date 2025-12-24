@@ -1,0 +1,11 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Kirby Modern Display
+Comment=Launch Kirby Modern Display Interface
+Exec=python3 /home/kirby/Desktop/kirby/kirby_modern_display.py
+Icon=/home/kirby/Desktop/kirby/images/kirby_icon.png
+Path=/home/kirby/Desktop/kirby
+Terminal=false
+Categories=Utility;
+StartupNotify=true
