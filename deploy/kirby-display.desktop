@@ -1,0 +1,5 @@
+[Desktop Entry]
+Type=Application
+Name=Kirby Weather Display
+Exec=__APP_DIR__/deploy/kirby-display-wrapper.sh
+X-GNOME-Autostart-enabled=true

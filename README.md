@@ -116,14 +116,51 @@ Based on Lethbridge, Alberta climate:
 
 ## 🌐 Raspberry Pi Deployment
 
-Perfect for running on a Raspberry Pi with a display:
+Kirby is designed to run unattended on a Raspberry Pi: plug it in and both the
+messaging server and the display come up on their own, and you can reach it
+from anywhere via [Tailscale](https://tailscale.com) — no port forwarding.
 
-1. Clone to your Pi
-2. Install dependencies
-3. Set up your API key
-4. Add your Kirby images
-5. Run both servers
-6. Access from any device on your network!
+### One-time setup
+
+```bash
+git clone https://github.com/Vextri/Kirby.git
+cd Kirby
+chmod +x deploy/install.sh
+./deploy/install.sh
+```
+
+This installs system + Python dependencies, installs Tailscale and connects
+this Pi to your tailnet (follow the printed login URL on first run), installs
+`kirby-web.service` (systemd, starts on boot, restarts on crash), and adds an
+autostart entry so `kirby_display.py` launches automatically on desktop login,
+waiting for the messaging server to be reachable first.
+
+Before running the install, either create `.env` yourself (see below) or let
+the script copy `.env.example` for you and fill in your real key afterward.
+
+For a totally hands-off setup on a fresh SD card (no monitor needed to log
+into Tailscale), generate a reusable auth key at
+https://login.tailscale.com/admin/settings/keys and run:
+
+```bash
+TAILSCALE_AUTHKEY=tskey-... ./deploy/install.sh
+```
+
+### Using it
+
+- **From your home network:** `http://<pi-local-ip>:5000`
+- **From anywhere:** `http://<pi-tailscale-ip>:5000`, once your own device is
+  also on the tailnet — both addresses are printed when the server starts, or
+  run `tailscale ip -4` on the Pi at any time.
+- Reboot the Pi (`sudo reboot`) to confirm everything comes back on its own.
+
+### Useful commands
+
+```bash
+sudo systemctl status kirby-web     # messaging server status/logs
+sudo systemctl restart kirby-web    # restart the messaging server
+tailscale status                    # see tailnet connection state
+```
 
 ## 📁 Project Structure
 

@@ -1,0 +1,21 @@
+[Unit]
+Description=Kirby Messaging Web Server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=__USER__
+WorkingDirectory=__APP_DIR__
+ExecStart=__APP_DIR__/venv/bin/python kirby_web_server.py
+Restart=always
+RestartSec=5
+StartLimitIntervalSec=0
+StandardOutput=journal
+StandardError=journal
+NoNewPrivileges=true
+ProtectSystem=strict
+ReadWritePaths=__APP_DIR__
+
+[Install]
+WantedBy=multi-user.target

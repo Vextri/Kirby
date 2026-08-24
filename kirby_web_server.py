@@ -163,7 +163,14 @@ def health():
 
 if __name__ == '__main__':
     print("🌟 Starting Kirby Messaging Server!")
-    print(f"📱 Access on local network at: http://{os.popen('hostname -I').read().strip().split()[0]}:5000")
+    try:
+        local_ip = os.popen('hostname -I').read().strip().split()[0]
+        print(f"📱 Local network: http://{local_ip}:5000")
+    except Exception:
+        pass
+    tailscale_ip = os.popen('tailscale ip -4 2>/dev/null').read().strip()
+    if tailscale_ip:
+        print(f"🌍 Tailscale (from anywhere): http://{tailscale_ip}:5000")
     print("💬 Friends can send messages to Kirby!")
     
     # Create templates directory if it doesn't exist
